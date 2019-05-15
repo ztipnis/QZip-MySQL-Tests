@@ -1,0 +1,20 @@
+#!/bin/bash
+PS3="Select test:"
+compression_types=("zlib" "qzip" "back")
+select c in "${compression_types[@]}"
+do
+  case $c in
+    "zlib")
+      (cd zlib && ./zlib.test)
+      break
+      ;;
+    "qzip")
+      (cd qzip && ./qzip.test)
+      break
+      ;;
+    "back")
+      break
+      ;;
+    *) echo "Invalid option $c";;
+  esac
+done
