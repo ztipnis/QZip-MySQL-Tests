@@ -161,14 +161,19 @@ for t in "${test[@]}"
 do
   for a in "${compression[@]}"
   do
-    echo "Running test $t with compression type $a with a compressability of $compressability"...
-    #sudo sh -c "echo 3 > /proc/sys/vm/drop_caches"
-    #iostat sda -p nvme0n1 nvme0n2 1 > write_only_io.log &
-    #vmstat 1 > write_only_vm.log &
-    (echo "sysbench $t --create_table_options=\"COMPRESSION=\"$a\"\" --string_compressibility_ratio=$compressability --mysql_storage_engine=innodb --table-size=$nrows --tables=$ntables --mysql-socket=/tmp/mysql.sock --mysql-user=$username --mysql-password=$password --mysql-db=sysdb_qzip --time=1800 --threads=16 --report-interval=10 run > oltp_write_only.log") & spinner
-    #sudo kill -9 $(pidof iostat)
-    #sudo kill -9 $(pidof vmstat)
+    echo "Running test $t with compression type $a with a compressability of ${compressability}..."
+    mkdir -p "$a/$t/Test_tables${ntables}_tsize${nrows}_cr${compressability}"
+    (
+      cd "$a/$t/Test_tables${ntables}_tsize${nrows}_cr${compressability}"
+      sudo sh -c "echo 3 > /proc/sys/vm/drop_caches"
+      iostat sda -p nvme0n1 nvme0n2 1 > io.log &
+      vmstat 1 > vmem.log &
+      (echo "sysbench $t --create_table_options=\"COMPRESSION=\"$a\"\" --string_compressibility_ratio=$compressability --mysql_storage_engine=innodb --table-size=$nrows --tables=$ntables --mysql-socket=/tmp/mysql.sock --mysql-user=$username --mysql-password=$password --mysql-db=sysdb_qzip --time=1800 --threads=16 --report-interval=10 run > test.log") & spinner
+      sudo kill -9 $(pidof iostat)
+      sudo kill -9 $(pidof vmstat)
+    )
   done
 done
+
 
 
