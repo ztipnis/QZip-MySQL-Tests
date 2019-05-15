@@ -1,20 +1,174 @@
 #!/bin/bash
-PS3="Select test:"
-compression_types=("zlib" "qzip" "back")
-select c in "${compression_types[@]}"
+username=root
+password="xubin@ci9123"
+spinner()
+{
+    local pid=$!
+    local delay=0.75
+    local spinstr='|/-\'
+    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
+        local temp=${spinstr#?}
+        printf " [%c]  " "$spinstr"
+        local spinstr=$temp${spinstr%"$temp"}
+        sleep $delay
+        printf "\b\b\b\b\b\b"
+    done
+    printf "    \b\b\b\b"
+}
+
+set_compression () {
+  clear
+  local PS3="Select Compression Type: "
+  local compressions=( "CPU Compression/Decompression" "QAT Compression/Decompression" "QAT Compression CPU Decompression" "None" "All")
+  select c in "${compressions[@]}"
+  do
+    case $c in
+      "CPU Compression/Decompression")
+          compression=("zlib")
+          export compression
+          break
+        ;;
+      "None")
+          compression=("none")
+          export compression
+          break
+        ;;
+      "QAT Compression/Decompression")
+          compression=("qatzip")
+          export compression
+          break
+        ;;
+      "QAT Compression CPU Decompression")
+          compression=("qatzip_compress")
+          export compression
+          break
+        ;;
+      "All")
+          compression=("zlib" "qatzip" "qatzip_compress" "none")
+          export compression
+          break
+        ;;
+    esac
+  done
+}
+
+set_tests () {
+  clear
+  local PS3="Select Which Test to Run: "
+  local tests=("OLTP Write Only" "OLTP Read Only" "OLTP Read/Write" "All")
+  select t in "${tests[@]}"
+  do
+    case $t in
+      "OLTP Write Only")
+        test=("oltp_write_only")
+        export test
+        break
+      ;;
+      "OLTP Read Only")
+        test=("oltp_read_only")
+        export test
+        break
+      ;;
+      "OLTP Read/Write")
+        test=("oltp_read_write")
+        export test
+        break
+      ;;
+      "All")
+        test=("oltp_write_only" "oltp_read_only" "oltp_read_write")
+        export test
+        break
+      ;;
+      *) echo "Invalid Test $t";;
+    esac
+  done
+}
+
+sc () {
+  clear
+  PS3="Setup: "
+  options=( "Set Compression Type" "Set String Compressability" "Select Tests" "Set Number of Tables" "Set Table Size" "Run" "Exit")
+  select o in "${options[@]}"
+  do
+    case $o in
+      "Set Compression Type")
+        set_compression
+        sc
+        break
+      ;;
+      "Set String Compressability")
+        clear
+        echo "Enter Compressabiliy (1-120 higher is more compressable)"
+        read compressability
+        export compressability;
+        sc
+        break;
+      ;;
+      "Select Tests")
+        set_tests
+        sc
+        break
+      ;;
+      "Set Number of Tables")
+        clear
+        echo "Enter Number of Tables"
+        read ntables
+        export ntables;
+        sc
+        break;
+      ;;
+      "Set Table Size")
+        clear
+        echo "Enter Number of Rows per Table"
+        read nrows
+        export nrows;
+        sc
+        break;
+      ;;
+
+      "Run")
+          clear
+          echo "Compression: ${compression[@]}"
+          echo "Compressability: ${compressability}"
+          echo "Tests: ${test[@]}"
+          echo "Number of Tables: ${ntables}"
+          echo "Number of Rows per Table: ${nrows}"
+
+        if [ -z "$compression" ]; then echo "Compression is not set";read -p "Press [Enter] key to continue..."; sc; break;
+        elif [ -z "$compressability" ]; then echo "Compressability is not set";read -p "Press [Enter] key to continue...";sc; break;
+        elif [ -z "$test" ]; then echo "Test is not set";read -p "Press [Enter] key to continue...";sc; break;
+        else
+          read -p "Continue? " -n 1 -r
+          echo
+          if [[ $REPLY =~ ^[Yy]$ ]]
+          then
+              break
+          else
+            sc
+            break
+          fi
+        fi
+      ;;
+      "Exit") exit;;
+      *) echo "Invalid option $o";read -p "Press [Enter] key to continue..."; sc; break;;
+    esac
+  done
+}
+ntables=8
+nrows=50000000
+sc
+for t in "${test[@]}"
 do
-  case $c in
-    "zlib")
-      (cd zlib && ./zlib.test)
-      break
-      ;;
-    "qzip")
-      (cd qzip && ./qzip.test)
-      break
-      ;;
-    "back")
-      break
-      ;;
-    *) echo "Invalid option $c";;
-  esac
+  for a in "${compression[@]}"
+  do
+    echo "Running test $t with compression type $a with a compressability of $compressability"...
+    #sudo sh -c "echo 3 > /proc/sys/vm/drop_caches"
+    #iostat sda -p nvme0n1 nvme0n2 1 > write_only_io.log &
+    #vmstat 1 > write_only_vm.log &
+    (echo "sysbench $t --create_table_options=\"COMPRESSION=\"$a\"\" --string_compressibility_ratio=$compressability --mysql_storage_engine=innodb --table-size=$nrows --tables=$ntables --mysql-socket=/tmp/mysql.sock --mysql-user=$username --mysql-password=$password --mysql-db=sysdb_qzip --time=1800 --threads=16 --report-interval=10 run > oltp_write_only.log") & spinner
+    #sudo kill -9 $(pidof iostat)
+    #sudo kill -9 $(pidof vmstat)
+  done
 done
+
+
