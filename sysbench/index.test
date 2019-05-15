@@ -1,6 +1,6 @@
 #!/bin/bash
 username=root
-password="xubin@ci9123"
+password="xubin@cii9123"
 spinner()
 {
     local pid=$!
