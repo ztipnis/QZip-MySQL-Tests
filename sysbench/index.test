@@ -87,11 +87,11 @@ set_tests () {
 sc () {
   clear
   PS3="Setup: "
-  options=( "Set Compression Type [$compression]" "Set String Compressability [$compressability]" "Select Tests [$test]" "Set Number of Tables [$ntables]" "Set Table Size [$nrows]" "Set Test Run Time [$rtime]" "Set Number of Threads [$nthrd]" "Run" "Exit")
+  options=( "Set Compression Type [${compression[@]}]" "Set String Compressability [$compressability]" "Select Tests [${test[@]}]" "Set Number of Tables [$ntables]" "Set Table Size [$nrows]" "Set Test Run Time [$rtime]" "Set Number of Threads [$nthrd]" "Run" "Exit")
   select o in "${options[@]}"
   do
     case $o in
-      "Set Compression Type [$compression]")
+      "Set Compression Type [${compression[@]}]")
         set_compression
         sc
         break
@@ -104,7 +104,7 @@ sc () {
         sc
         break;
       ;;
-      "Select Tests [$test]")
+      "Select Tests [${test[@]}]")
         set_tests
         sc
         break
@@ -149,6 +149,8 @@ sc () {
           echo "Tests: ${test[@]}"
           echo "Number of Tables: ${ntables}"
           echo "Number of Rows per Table: ${nrows}"
+          echo "Running Time of Test: ${rtime}"
+          echo "Number of Threads: ${nthrd}"
 
         if [ -z "$compression" ]; then echo "Compression is not set";read -p "Press [Enter] key to continue..."; sc; break;
         elif [ -z "$compressability" ]; then echo "Compressability is not set";read -p "Press [Enter] key to continue...";sc; break;
@@ -172,6 +174,9 @@ sc () {
 }
 ntables=8
 nrows=50000000
+rtime=1800
+nthrd=16
+compressability=1
 sc
 for t in "${test[@]}"
 do
