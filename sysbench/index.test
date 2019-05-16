@@ -87,16 +87,16 @@ set_tests () {
 sc () {
   clear
   PS3="Setup: "
-  options=( "Set Compression Type" "Set String Compressability" "Select Tests" "Set Number of Tables" "Set Table Size" "Run" "Exit")
+  options=( "Set Compression Type [$compression]" "Set String Compressability [$compressability]" "Select Tests [$test]" "Set Number of Tables [$ntables]" "Set Table Size [$nrows]" "Set Test Run Time [$rtime]" "Set Number of Threads [$nthrd]" "Run" "Exit")
   select o in "${options[@]}"
   do
     case $o in
-      "Set Compression Type")
+      "Set Compression Type [$compression]")
         set_compression
         sc
         break
       ;;
-      "Set String Compressability")
+      "Set String Compressability [$compressability]")
         clear
         echo "Enter Compressabiliy (1-120 higher is more compressable)"
         read compressability
@@ -104,12 +104,12 @@ sc () {
         sc
         break;
       ;;
-      "Select Tests")
+      "Select Tests [$test]")
         set_tests
         sc
         break
       ;;
-      "Set Number of Tables")
+      "Set Number of Tables [$ntables]")
         clear
         echo "Enter Number of Tables"
         read ntables
@@ -117,7 +117,7 @@ sc () {
         sc
         break;
       ;;
-      "Set Table Size")
+      "Set Table Size [$nrows]")
         clear
         echo "Enter Number of Rows per Table"
         read nrows
@@ -126,6 +126,22 @@ sc () {
         break;
       ;;
 
+      "Set Test Run Time [$rtime]")
+        clear
+        echo "Enter Run Time in Seconds"
+        read rtime
+        export rtime;
+        sc
+        break
+      ;;
+      "Set Number of Threads [$nthrd]")
+        clear
+        echo "Enter # of Threads"
+        read nthrd
+        export nthrd;
+        sc
+        break
+      ;;
       "Run")
           clear
           echo "Compression: ${compression[@]}"
