@@ -87,7 +87,7 @@ set_tests () {
 sc () {
   clear
   PS3="Setup: "
-  options=( "Set Compression Type [${compression[@]}]" "Set String Compressability [$compressability]" "Select Tests [${test[@]}]" "Set Number of Tables [$ntables]" "Set Table Size [$nrows]" "Set Test Run Time [$rtime]" "Set Number of Threads [$nthrd]" "Run" "Exit")
+  options=( "Set Compression Type [$(echo ${compression[@]})]" "Set String Compressability [$compressability]" "Select Tests [${test[@]}]" "Set Number of Tables [$ntables]" "Set Table Size [$nrows]" "Set Test Run Time [$rtime]" "Set Number of Threads [$nthrd]" "Run" "Exit")
   select o in "${options[@]}"
   do
     case $o in
