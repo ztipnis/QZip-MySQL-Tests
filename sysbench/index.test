@@ -186,14 +186,14 @@ sc
 t="oltp_read_write"
 for a in "${compression[@]}"
 do
-  eval "sysbench $t  --create_table_options=\"COMPRESSION=\\\"$a\\\"\" --string_compressibility_ratio=$compressability --mysql_storage_engine=innodb --table-size=${nrows} --tables=${ntables} --mysql-socket=/tmp/mysql.sock --mysql-user=$username --mysql-password=$password --mysql-db=sysdb_$a --time=$rtime --threads=$nthrd --report-interval=10 prepare &> $a/prepare.log"
+  echo "Preparing: @a ..."
+  eval "sysbench $t  --create_table_options=\"COMPRESSION=\\\"$a\\\"\" --string_compressibility_ratio=$compressability --mysql_storage_engine=innodb --table-size=${nrows} --tables=${ntables} --mysql-socket=/tmp/mysql.sock --mysql-user=$username --mysql-password=$password --mysql-db=sysdb_$a --time=$rtime --threads=$nthrd --report-interval=10 prepare"
   for t in "${test[@]}"
   do
     echo "Running test $t with compression type $a with a compressability of ${compressability}..."
     mkdir -p "$a/$t/Test_tables${ntables}_tsize${nrows}_cr${compressability}"
     (
-      cd "$a/$t/Test_tables${ntables}_tsize${nrows}_cr${compressability}"
-      
+      cd "$a/$t/Test_tables${ntables}_tsize${nrows}_cr${compressability}" 
       sudo sh -c "echo 3 > /proc/sys/vm/drop_caches"
       iostat sda -p nvme0n1 nvme0n2 1 -x > io.log &
       vmstat 1 > vmem.log &
