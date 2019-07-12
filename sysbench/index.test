@@ -19,10 +19,15 @@ spinner()
 set_compression () {
   clear
   local PS3="Select Compression Type: "
-  local compressions=( "CPU Compression/Decompression" "QAT Compression/Decompression" "QAT Compression CPU Decompression" "None" "All")
+  local compressions=( "CPU Compression/Decompression" "QAT Compression/Decompression" "QAT Compression CPU Decompression" "LZ4" "None" "All")
   select c in "${compressions[@]}"
   do
     case $c in
+      "LZ4")
+	  compression=("lz4")
+	  export compression
+	  break
+	;;
       "CPU Compression/Decompression")
           compression=("zlib")
           export compression
@@ -75,7 +80,7 @@ set_tests () {
         break
       ;;
       "All")
-        test=("oltp_write_only" "oltp_read_only" "oltp_read_write")
+        test=("oltp_read_only" "oltp_read_write")
         export test
         break
       ;;
@@ -178,24 +183,26 @@ rtime=1800
 nthrd=16
 compressability=1
 sc
-for t in "${test[@]}"
+t="oltp_read_write"
+for a in "${compression[@]}"
 do
-  for a in "${compression[@]}"
+  eval "sysbench $t  --create_table_options=\"COMPRESSION=\\\"$a\\\"\" --string_compressibility_ratio=$compressability --mysql_storage_engine=innodb --table-size=${nrows} --tables=${ntables} --mysql-socket=/tmp/mysql.sock --mysql-user=$username --mysql-password=$password --mysql-db=sysdb_$a --time=$rtime --threads=$nthrd --report-interval=10 prepare &> $a/prepare.log"
+  for t in "${test[@]}"
   do
     echo "Running test $t with compression type $a with a compressability of ${compressability}..."
     mkdir -p "$a/$t/Test_tables${ntables}_tsize${nrows}_cr${compressability}"
     (
       cd "$a/$t/Test_tables${ntables}_tsize${nrows}_cr${compressability}"
-      eval "sysbench $t --create_table_options=\"COMPRESSION=\\\"$a\\\"\" --string_compressibility_ratio=$compressability --mysql_storage_engine=innodb --table-size=${nrows} --tables=${ntables} --mysql-socket=/tmp/mysql.sock --mysql-user=$username --mysql-password=$password --mysql-db=sysdb_$a --time=$rtime --threads=$nthrd --report-interval=10 prepare &> prepare.log"
+      
       sudo sh -c "echo 3 > /proc/sys/vm/drop_caches"
       iostat sda -p nvme0n1 nvme0n2 1 -x > io.log &
       vmstat 1 > vmem.log &
       (eval "sysbench $t --create_table_options=\"COMPRESSION=\\\"$a\\\"\" --string_compressibility_ratio=$compressability --mysql_storage_engine=innodb --table-size=$nrows --tables=$ntables --mysql-socket=/tmp/mysql.sock --mysql-user=$username --mysql-password=$password --mysql-db=sysdb_$a --time=$rtime --threads=$nthrd --report-interval=10 run &> test.log") & spinner
       sudo kill -9 $(pidof iostat)
       sudo kill -9 $(pidof vmstat)
-      eval "sysbench $t --create_table_options=\"COMPRESSION=\\\"$a\\\"\" --string_compressibility_ratio=$compressability --mysql_storage_engine=innodb --table-size=${nrows} --tables=${ntables} --mysql-socket=/tmp/mysql.sock --mysql-user=$username --mysql-password=$password --mysql-db=sysdb_$a --time=$rtime --threads=$nthrd --report-interval=10 cleanup &> cleanup.log"
     )
   done
+  eval "sysbench $t  --create_table_options=\"COMPRESSION=\\\"$a\\\"\" --string_compressibility_ratio=$compressability --mysql_storage_engine=innodb --table-size=${nrows} --tables=${ntables} --mysql-socket=/tmp/mysql.sock --mysql-user=$username --mysql-password=$password --mysql-db=sysdb_$a --time=$rtime --threads=$nthrd --report-interval=10 cleanup &> $a/cleanup.log"
 done
 
 
